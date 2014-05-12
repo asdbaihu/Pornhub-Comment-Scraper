@@ -1,22 +1,45 @@
 #pornhub
 import requests
-
+import sys
 
 
 #Crawls through the pornhub database and amasses a set 
 #
 #
-def crawl(initialURL):
+def crawl(initialURL, maxComments):
 
-	r = requests.get(initialURL)
+	#keep this so we don't get any cycles
+	exploredPages = set()
 
-	print("Got page " + initialURL)
+	frontier = list()
 
-	comments = getCommentsFromPageText(r.content)
-	
-	links = getLinksFromPageText(r.content)
+	frontier.append(initialURL)
 
-	return (comments, links)
+	allComments = set()
+
+	#frontier is 'true' if it is non-empty
+	while frontier and len(allComments) < maxComments:
+
+		url = frontier.pop()
+
+		if url in exploredPages:
+			continue
+
+		r = requests.get(url)
+
+		print("Got page " + initialURL)
+
+		comments = getCommentsFromPageText(str(r.content))
+		allComments = allComments.union(comments)
+
+		links = getLinksFromPageText(str(r.content))
+
+		for link in links:
+			#print("Adding link: " + link)
+			frontier.append(link)
+
+		exploredPages.add(url)
+	return allComments
 
 
 def getCommentsFromPageText(content):
@@ -45,9 +68,11 @@ def getCommentsFromPageText(content):
 
 def getLinksFromPageText(pageText):
 
-	linkMarker = "<a href=\"/view_video.php?\""
+	linkMarker = "<a href=\"/view_video.php?"
 
 	pageCopy = str(pageText)
+
+	print(pageCopy.find(linkMarker))
 
 	linkSet = set()
 
@@ -59,12 +84,20 @@ def getLinksFromPageText(pageText):
 		#copy the link
 		link = pageCopy[:pageCopy.find("\"")]
 
+		link = "http://www.pornhub.com" + link
+
 		linkSet.add(link)
 	
 	return linkSet
 
 
-comments,links = crawl("http://www.pornhub.com/view_video.php?viewkey=1193961895")
+if (len(sys.argv) != 2):
+	print "Usage: python cream.py <initial url> <number of comments>"
+
+initialURL = sys.argv[0]
+numberOfComments = int(sys.argv[1])
+
+comments = crawl(initialURL, numberOfComments)
 
 x = 0
 for y in comments:
