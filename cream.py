@@ -1,14 +1,13 @@
 #pornhub
 import requests
 import sys
-
+import random
 
 #Crawls through the pornhub database and amasses a set 
 #
-#
+#returns the set of all comments, where each string in the set contains a comment
 def crawl(initialURL, maxComments):
-
-	#keep this so we don't get any cycles
+    #keep this so we don't get any cycles
 	exploredPages = set()
 
 	frontier = list()
@@ -41,7 +40,8 @@ def crawl(initialURL, maxComments):
 		exploredPages.add(url)
 	return allComments
 
-
+# Given a page's HTML content
+# returns all of the comments from that page
 def getCommentsFromPageText(content):
 	#search for the correct divs
 	commentMarker = "<div class=\"commentMsg\">"
@@ -66,6 +66,11 @@ def getCommentsFromPageText(content):
 	return allComments
 
 
+
+
+# Given a page's text, provides a set containing all of the links
+# outgoing from those pages.
+# returns a set of links, strings
 def getLinksFromPageText(pageText):
 
 	linkMarker = "<a href=\"/view_video.php?"
@@ -91,17 +96,89 @@ def getLinksFromPageText(pageText):
 	return linkSet
 
 
-if (len(sys.argv) != 2):
-	print "Usage: python cream.py <initial url> <number of comments>"
+# Returns triples of words from the comments
+def generateMarkovData(commentSet):
+	triples = set()
+	for comment in commentSet:
+		words = comment.split()
+		words = [x.lower() for x in words]
+		#form triples
+		for y in range(0, len(words)-2):
+			current_triple = (words[y].lower(),words[y+1].lower(),words[y+2].lower())
+			triples.add(current_triple)
+	return triples
 
-initialURL = sys.argv[0]
-numberOfComments = int(sys.argv[1])
+#markovData = Set of triples
+def getRandomWord(markovData):
+	return random.choice(random.choice((random.sample(markovData, 1))))
 
-comments = crawl(initialURL, numberOfComments)
 
-x = 0
-for y in comments:
-	x = x + 1
-	print(str(x) + ": " + y)
+# Markov chain-type combination
+def generateRandomSentence(markovData):
+	currentWord = getRandomWord(markovData)
+	nextWord = getRandomWord(markovData)
+	sentence = currentWord + " " + nextWord + " "
+	
+	while ((not (nextWord==None and nextWord[len(nextWord)]=="." and nextWord==".")) and ((len(sentence.split())<40))):
+		results = filter(lambda (a,b,c): (a==currentWord and b==nextWord), markovData)
+		currentWord = nextWord
+		if not results:
+			c = getRandomWord(markovData)
+			nextWord = c
+			sentence = sentence + nextWord + " "
+		else:
+			(a,b,c) = random.choice(results)
+			nextWord = c
+			sentence = sentence + nextWord + " "
+	return sentence
+
+def writeCommentsToFile(commentSet, fileName):
+	f = open(fileName, 'w') 
+	for comment in commentSet:
+		f.write(comment + "\n")
+	f.close()
+
+def loadCommentSetFromFile(fileName):
+	f = open(fileName, 'r')
+	content = list(f.readlines())
+	f.close()
+	return content
+
+arguments_dict = dict()
+
+if (("-url" in sys.argv) and ("-file" in sys.argv)) or ((not ("-url" in sys.argv)) and (not ("-file" in sys.argv))):
+	print "Usage: python cream.py [-url <initial url> -numcomments <number of comments> -outputfile <output file>] [-file filename]"
+	exit()
+
+current_argument = ""
+for arg in sys.argv:
+	if (arg[0] == "-"):
+		current_argument = arg[1:]
+	else:
+		arguments_dict[current_argument] = arg
+
+if ("url" in arguments_dict):
+	initialURL = arguments_dict["url"]
+	numberOfComments = int(arguments_dict["numcomments"])
+	comments = crawl(initialURL, numberOfComments)
+	print("Writing comments to file... " + arguments_dict["outputfile"])
+	writeCommentsToFile(comments, arguments_dict["outputfile"])
+	print("Loaded comments, training markov chain....")
+	markovData = generateMarkovData(comments)
+	print("Markov Data Loaded")
+	print("Generating sentence...")
+	sentence = generateRandomSentence(markovData)
+	print("Sentence: " + sentence)
+else:
+	fileName = arguments_dict["file"]
+	bible_comments = loadCommentSetFromFile("/Users/Justin/Programming/pornhubcrawler/genesis.txt")
+	comments = loadCommentSetFromFile(fileName)
+	comments.extend(bible_comments)
+	print("Loaded comments from file")
+	markovData = generateMarkovData(comments)
+	print("Markov Data Loaded")
+	print("Generating sentence...")
+	sentence = generateRandomSentence(markovData)
+	print("Sentence: " + sentence)
 
 
