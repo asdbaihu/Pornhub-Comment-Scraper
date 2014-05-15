@@ -147,7 +147,7 @@ def loadCommentSetFromFile(fileName):
 arguments_dict = dict()
 
 if (("-url" in sys.argv) and ("-file" in sys.argv)) or ((not ("-url" in sys.argv)) and (not ("-file" in sys.argv))):
-	print "Usage: python cream.py [-url <initial url> -numcomments <number of comments> -outputfile <output file>] [-file filename]"
+	print "Usage: python cream.py [-url <initial url> -numcomments <number of comments> -bible <path to bible> -outputfile <output file>] [-file filename]"
 	exit()
 
 current_argument = ""
@@ -161,6 +161,10 @@ if ("url" in arguments_dict):
 	initialURL = arguments_dict["url"]
 	numberOfComments = int(arguments_dict["numcomments"])
 	comments = crawl(initialURL, numberOfComments)
+	print("Loading bible...")
+	bible_comments = loadCommentSetFromFile(arguments_dict["bible"])
+	print("Merging...")
+	comments = comments.union(bible_comments)
 	print("Writing comments to file... " + arguments_dict["outputfile"])
 	writeCommentsToFile(comments, arguments_dict["outputfile"])
 	print("Loaded comments, training markov chain....")
@@ -171,9 +175,7 @@ if ("url" in arguments_dict):
 	print("Sentence: " + sentence)
 else:
 	fileName = arguments_dict["file"]
-	bible_comments = loadCommentSetFromFile("/Users/Justin/Programming/pornhubcrawler/genesis.txt")
 	comments = loadCommentSetFromFile(fileName)
-	comments.extend(bible_comments)
 	print("Loaded comments from file")
 	markovData = generateMarkovData(comments)
 	print("Markov Data Loaded")
