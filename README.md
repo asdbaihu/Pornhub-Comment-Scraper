@@ -32,6 +32,10 @@ Also -- feel free to use this with something besides genesis. You know, the enti
 Made whilst procrastinating during finals week.
 
 
+(A note)
+Some of the markov chain implementation was taken from this blog post:
+http://agiliq.com/blog/2009/06/generating-pseudo-random-text-with-markov-chains-u/
+
 
 
 
