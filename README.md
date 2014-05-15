@@ -3,6 +3,12 @@ Cream.py
 
 A markov chain combining the book of genesis and pornhub comments -- all in python!
 
+What is it?:
+
+A markov chain uses transitory probability to generate sentences. My algorithm for generating sentences is (at this moment) pretty shitty, because most pornhub comments don't have the greatest grammar. So, after like 40 words, the algorithm spits out your sentence.
+
+In short: You use this generate sentences that are partially pornhub comment, partially (insert media here). I used the book of genesis as my second source in my tests, but feel free to use whatever you want.
+
 
 Usage:
 
