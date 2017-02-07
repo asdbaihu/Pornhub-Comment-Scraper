@@ -2,6 +2,7 @@
 import requests
 import sys
 import random
+import html5lib
 from bs4 import BeautifulSoup
 import re
 
@@ -40,6 +41,9 @@ def crawl(initialURL, maxComments):
 		exploredPages.add(url)
 	return allComments
 
+def remove_non_ascii_1(text):
+    return ''.join(i for i in text if ord(i)<128)
+
 # Given a page's HTML content
 # returns all of the comments from that page
 def getCommentsFromPageText(content):
@@ -48,9 +52,15 @@ def getCommentsFromPageText(content):
 	soup = BeautifulSoup(content, "html5lib")
 	comments = set()
 	for comment in soup.findAll("div", {"class" : "commentMessage"}):
-		commentText = ''.join([v.extract() for v in comment])
-		commentText = ' '.join(commentText.split())
+		# Remove tabs and new lines
+		commentText = comment.text
+		commentText = commentText.replace("\t", "")
+		commentText = commentText.replace("\n", "")
+		commentText = commentText.replace("Reply", "")
+		commentText = remove_non_ascii_1(commentText)
 		comments.add(commentText)
+		print commentText
+
 	print "Num comments on this page: " + str(len(comments))	
 	return comments
 
@@ -67,7 +77,7 @@ def getLinksFromPageText(pageText):
 
 	linkSet = set()
 
-	while pageCopy.find(linkMarker) > 0:
+	while pageCopy.find(linkMarker)  > 0:
 
 		#skip to the thing
 		pageCopy = pageCopy[pageCopy.find(linkMarker)+9:]
@@ -133,7 +143,7 @@ def loadCommentSetFromFile(fileName):
 arguments_dict = dict()
 
 if (("-url" in sys.argv) and ("-file" in sys.argv)) or ((not ("-url" in sys.argv)) and (not ("-file" in sys.argv))):
-	print "Usage: python cream.py [-url <initial url> -numcomments <number of comments> -bible <path to bible> -outputfile <output file>] [-file filename]"
+	print "Usage: python scrape.py [-url <initial url> -numcomments <number of comments> -bible <path to bible> -outputfile <output file>] [-file filename]"
 	print "-url: the initial url to start the search at."
 	print "-numcomments: the maximum number of comments to pull from pornhub."
 	print "-bible: the text to mix in with the comments. optional. " 
@@ -150,13 +160,15 @@ if ("url" in arguments_dict):
 	initialURL = arguments_dict["url"]
 	numberOfComments = int(arguments_dict["numcomments"])
 	comments = crawl(initialURL, numberOfComments)
+	outputFile = arguments_dict["outputfile"]
 	if "bible" in arguments_dict:
 		print("Loading bible...")
 		bible_comments = loadCommentSetFromFile(arguments_dict["bible"])
 		print("Merging...")
 		comments = comments.union(bible_comments)
-		print("Writing comments to file... " + arguments_dict["outputfile"])
-		writeCommentsToFile(comments, arguments_dict["outputfile"])
+		comments = list(comments)
+		for i in range(3):
+			comments.extend(bible_comments)
 		print("Loaded comments, training markov chain....")
 		markovData = generateMarkovData(comments)
 		print("Markov Data Loaded")
@@ -165,6 +177,7 @@ if ("url" in arguments_dict):
 		print("Sentence: " + sentence)
 	else:
 		print comments
+		writeCommentsToFile(comments, arguments_dict["outputfile"])
 else:
 	fileName = arguments_dict["file"]
 	comments = loadCommentSetFromFile(fileName)
